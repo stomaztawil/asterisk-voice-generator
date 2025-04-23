@@ -1,0 +1,15 @@
+{
+    "paths": {
+      "soundList": "/var/lib/asterisk/sounds/en/core-sounds-en.txt",
+      "outputDir": "/opt/asterisk/custom-sounds",
+      "sqlFile": "/opt/asterisk/custom-sounds/import.sql"
+    },
+    "voices": {
+      "defaultVoice": "Joanna",
+      "language": "en-US"
+    },
+    "database": {
+      "table": "recordings",
+      "schema": "asterisk"
+    }
+  }
