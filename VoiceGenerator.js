@@ -1,8 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { PollyService } from '../services/PollyService.js';
-import { AsteriskDB } from '../services/AsteriskDB.js';
-import { FileConverter } from '../services/FileConverter.js';
+import { PollyService } from './lib/services/PollyService.js';
+import { AsteriskDB } from './lib/services/AsteriskDB.js';
+import { FileConverter } from './lib/services/FileConverter.js';
 
 export class VoiceGenerator {
     constructor() {
@@ -94,4 +94,23 @@ export class VoiceGenerator {
     async finalize() {
         await this.db.close();
     }
+
+
+    static async  main() {
+        try {
+            console.log('Iniciando processamento de arquivos de áudio...');
+            const generator = new VoiceGenerator();
+            await generator.initialize();
+            await generator.processSoundFiles();
+            await generator.finalize();
+            console.log('Processamento concluído com sucesso!');
+        } catch (error) {
+            console.error('Erro durante a execução:', error);
+            process.exit(1);
+        }
+    }
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+    VoiceGenerator.main();
 }

@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "node -r dotenv/config src/index.js",
+    "start": "node ./VoiceGenerator.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
