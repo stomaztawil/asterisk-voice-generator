@@ -1,13 +1,11 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { PollyService } from './lib/services/PollyService.js';
-import { AsteriskDB } from './lib/services/AsteriskDB.js';
 import { FileConverter } from './lib/services/FileConverter.js';
 
 export class VoiceGenerator {
     constructor() {
         this.polly = new PollyService();
-        this.db = new AsteriskDB();
         this.converter = new FileConverter();
         
         this.config = {
@@ -25,7 +23,6 @@ export class VoiceGenerator {
     async initialize() {
         await this.polly.verifyCredentials();
         await fs.ensureDir(this.config.paths.outputDir);
-        await this.db.initialize();
     }
 
     async processSoundFiles() {
@@ -81,20 +78,8 @@ export class VoiceGenerator {
             voiceId: this.config.voices.defaultVoice
         });
 
-        // Registrar no banco de dados
-        await this.db.insertRecording({
-            filename: item.filename,
-            description: item.text,
-            language: this.config.voices.language
-        });
-
         console.log(`Arquivo ${item.filename} processado com sucesso!`);
     }
-
-    async finalize() {
-        await this.db.close();
-    }
-
 
     static async  main() {
         try {
@@ -102,7 +87,6 @@ export class VoiceGenerator {
             const generator = new VoiceGenerator();
             await generator.initialize();
             await generator.processSoundFiles();
-            await generator.finalize();
             console.log('Processamento concluído com sucesso!');
         } catch (error) {
             console.error('Erro durante a execução:', error);

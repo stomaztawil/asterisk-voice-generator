@@ -2,10 +2,10 @@
   "name": "asterisk-voice-generator",
   "version": "1.0.0",
   "description": "Gerador de arquivos de áudio para Asterisk usando AWS Polly com integração ao banco de dados",
-  "main": "src/index.js",
+  "main": "VoiceGenerator.js",
   "type": "module",
   "scripts": {
-    "start": "node ./VoiceGenerator.js",
+    "start": "node -r dotenv/config ./VoiceGenerator.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -15,7 +15,8 @@
     "mysql2": "^3.6.5"
   },
   "directories": {
-    "lib": "lib"
+    "lib": "lib",
+    "config": "config"
   },
   "repository": {
     "type": "git",
