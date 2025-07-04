@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { PollyService } from './lib/services/PollyService.js';
 import { FileConverter } from './lib/services/FileConverter.js';
-import { CacheManager } from './lib/services/CacheManager.js'; // Nova classe
+import { CacheManager } from './lib/services/CacheManager.js'; // Updated class
 
 export class VoiceGenerator {
     constructor() {
@@ -54,7 +54,7 @@ export class VoiceGenerator {
             processingQueue.push(this.processSoundItem(item));
         }
 
-        // Processar em paralelo com limitação
+        // Process in parallel with error handling
         await Promise.all(processingQueue.map(p => p.catch(e => console.error(e))));
 
         if (this.generatedFiles.length > 0) {
@@ -69,7 +69,7 @@ export class VoiceGenerator {
             const data = await fs.readFile(this.config.paths.soundList, 'utf8');
             return JSON.parse(data);
         } catch (error) {
-            throw new Error(`Falha ao carregar lista de sons: ${error.message}`);
+            throw new Error(`Failed to load sound list: ${error.message}`);
         }
     }
 
@@ -87,13 +87,13 @@ export class VoiceGenerator {
         const outputFile = `${outputBase}.mp3`;
         const itemHash = this.getItemHash(item);
 
-        // Verificar cache e existência do arquivo
+        // Check cache and file existence
         if (await this.cacheManager.isValid(relativePath, itemHash, outputFile)) {
-            console.log(`Pulando ${relativePath} - sem alterações`);
+            console.log(`Skipping ${relativePath} - no changes`);
             return;
         }
 
-        console.log(`Processando: ${relativePath}`);
+        console.log(`Processing: ${relativePath}`);
         
         await this.polly.generateAudio({
             text: item.speechText,
@@ -103,11 +103,11 @@ export class VoiceGenerator {
 
         this.generatedFiles.push({ mp3Path: outputFile, basePath: outputBase });
         this.cacheManager.update(relativePath, itemHash);
-        console.log(`Arquivo processado: ${relativePath}`);
+        console.log(`File processed: ${relativePath}`);
     }
         
     async convertGeneratedFiles() {
-        console.log(`Iniciando conversão de ${this.generatedFiles.length} arquivos...`);
+        console.log(`Starting conversion of ${this.generatedFiles.length} files...`);
         const conversionQueue = [];
 
         for (const { mp3Path, basePath } of this.generatedFiles) {
@@ -120,19 +120,19 @@ export class VoiceGenerator {
         }
 
         await Promise.all(conversionQueue);
-        console.log('Conversão de formatos concluída!');
+        console.log('Format conversion completed!');
     }
 
     static async main() {
         const generator = new VoiceGenerator();
         
         try {
-            console.log('Iniciando processamento...');
+            console.log('Starting processing...');
             await generator.initialize();
             await generator.processSoundFiles();
-            console.log('Processamento concluído!');
+            console.log('Processing completed!');
         } catch (error) {
-            console.error('Erro fatal:', error);
+            console.error('Fatal error:', error);
             process.exit(1);
         } finally {
             generator.polly.destroy?.();
@@ -140,7 +140,7 @@ export class VoiceGenerator {
     }
 }
 
-// Execução direta
+// Direct execution
 if (import.meta.url === `file://${process.argv[1]}`) {
     VoiceGenerator.main()
         .finally(() => setTimeout(() => process.exit(), 500).unref());
