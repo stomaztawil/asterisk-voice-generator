@@ -34,54 +34,44 @@ export class VoiceGenerator {
             try {
                 await this.processSoundItem(item);
             } catch (error) {
-                console.error(`Falha ao processar ${item.filename}:`, error.message);
+                console.error(`Falha ao processar ${item.fileName}:`, error.message);
             }
         }
     }
 
     async loadSoundList() {
         const data = await fs.readFile(this.config.paths.soundList, 'utf8');
-        return data.split('\n')
-            .map(line => this.parseSoundLine(line))
-            .filter(Boolean);
-    }
-
-    parseSoundLine(line) {
-        line = line.trim();
-        if (!line || line.startsWith(';')) return null;
-
-        const colonIndex = line.indexOf(':');
-        if (colonIndex === -1) return null;
-
-        return {
-            filename: line.substring(0, colonIndex).trim(),
-            text: line.substring(colonIndex + 1).trim()
-        };
+        return JSON.parse(data);
     }
 
     shouldSkip(item) {
-        if (!item || !item.filename || !item.text) return true;
-        if (item.text.startsWith('<') && item.text.endsWith('>')) return true;
-        if (item.text.startsWith('[') && item.text.endsWith(']')) return true;
+        if (!item || !item.fileName || !item.speechText) return true;
+        if (item.speechText.startsWith('<') && item.speechText.endsWith('>')) return true;
+        if (item.speechText.startsWith('[') && item.speechText.endsWith(']')) return true;
         return false;
     }
 
     async processSoundItem(item) {
-        const outputBase = path.join(this.config.paths.outputDir, item.filename);
+        // Caminho completo de saída (mantendo estrutura de diretórios)
+        const outputBase = path.join(
+            this.config.paths.outputDir, 
+            item.path, 
+            item.fileName
+        );
         
-        console.log(`Processando: ${item.filename}`);
+        console.log(`Processando: ${path.join(item.path, item.fileName)}`);
         
         // Gerar arquivos de áudio
         await this.polly.generateAudio({
-            text: item.text,
+            text: item.speechText,
             outputFile: outputBase,
             voiceId: this.config.voices.defaultVoice
         });
 
-        console.log(`Arquivo ${item.filename} processado com sucesso!`);
+        console.log(`Arquivo processado: ${path.join(item.path, item.fileName)}`);
     }
 
-    static async  main() {
+    static async main() {
         try {
             console.log('Iniciando processamento de arquivos de áudio...');
             const generator = new VoiceGenerator();
