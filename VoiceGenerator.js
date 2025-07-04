@@ -6,8 +6,6 @@ import { FileConverter } from './lib/services/FileConverter.js';
 
 export class VoiceGenerator {
     constructor() {
-        this.polly = new PollyService();
-        this.converter = new FileConverter();
         
         this.config = {
             paths: {
@@ -18,10 +16,14 @@ export class VoiceGenerator {
                 defaultVoice: process.env.DEFAULT_VOICE,
                 language: process.env.VOICE_LANGUAGE
             }
-        }; // Fechando corretamente o this.config
+        };
 
-        // Inicialização do cache
+        this.polly = new PollyService();
+        this.converter = new FileConverter();
+        this.generatedFiles = []; // Armazenará os arquivos gerados nesta execução
         this.cacheFile = path.join(this.config.paths.outputDir, '.audio-cache.json');
+        
+        // Inicialização do cache
         this.audioCache = {};
         this.cacheChanged = false;
     }
@@ -67,6 +69,11 @@ export class VoiceGenerator {
             }
         }
 
+        // Converter arquivos gerados para os formatos adicionais
+        if (this.generatedFiles.length > 0) {
+            await this.convertGeneratedFiles();
+        }
+
         // Salva o cache apenas se houve alterações
         if (this.cacheChanged) {
             await this.saveCache();
@@ -109,12 +116,19 @@ export class VoiceGenerator {
             }
         }
 
+        // Se chegou aqui, precisa gerar o áudio
         console.log(`Processando: ${relativePath}`);
         
-        await this.polly.generateAudio({
-            text: item.speechText,
-            outputFile: outputBase,
-            voiceId: this.config.voices.defaultVoice
+        //await this.polly.generateAudio({
+        //    text: item.speechText,
+        //    outputFile: outputBase,
+        //    voiceId: this.config.voices.defaultVoice
+        //});
+
+        // Adiciona à lista de arquivos gerados
+        this.generatedFiles.push({
+            mp3Path: `${outputBase}.mp3`,
+            basePath: outputBase
         });
 
         // Atualiza o cache
@@ -133,6 +147,28 @@ export class VoiceGenerator {
         } catch (error) {
             console.error('Erro ao salvar cache:', error.message);
         }
+    }
+
+    async convertGeneratedFiles() {
+        console.log(`Iniciando conversão de ${this.generatedFiles.length} arquivos para formatos adicionais...`);
+        
+        for (const { mp3Path, basePath } of this.generatedFiles) {
+            try {
+                console.log(`Convertendo: ${path.basename(mp3Path)}`);
+                
+                // Lista de formatos desejados
+                const formats = ['alaw', 'ulaw', 'sln16', 'g729'];
+                
+                for (const format of formats) {
+                    const outputFile = `${basePath}.${format}`;
+                    await this.converter.convertFile(mp3Path, outputFile, format);
+                }
+            } catch (error) {
+                console.error(`Falha na conversão de ${mp3Path}:`, error.message);
+            }
+        }
+        
+        console.log('Conversão de formatos concluída!');
     }
 
     async cleanup() {
