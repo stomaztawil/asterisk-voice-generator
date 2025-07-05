@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
+import { PackageBuilder } from './lib/services/PackageBuilder.js';
 import { PollyService } from './lib/services/PollyService.js';
 import { FileConverter } from './lib/services/FileConverter.js';
 import { CacheManager } from './lib/services/CacheManager.js'; // Updated class
@@ -25,6 +26,9 @@ export class VoiceGenerator {
             voices: {
                 defaultVoice: process.env.DEFAULT_VOICE,
                 language: process.env.VOICE_LANGUAGE
+            },
+            packaging: {
+                buildPackage: process.env.BUILD_DEB_PACKAGE
             }
         };
     }
@@ -123,6 +127,17 @@ export class VoiceGenerator {
         console.log('Format conversion completed!');
     }
 
+    async buildDebPackage() {
+        if (!this.config.paths.outputDir) {
+            throw new Error('Output directory not configured');
+        }
+        
+        const builder = new PackageBuilder(this.config.paths.outputDir);
+        const debPath = await builder.build();
+        console.log(`📦 Debian package created at: ${debPath}`);
+        return debPath;
+    }
+
     static async main() {
         const generator = new VoiceGenerator();
         
@@ -131,6 +146,12 @@ export class VoiceGenerator {
             await generator.initialize();
             await generator.processSoundFiles();
             console.log('Processing completed!');
+
+            if (process.env.BUILD_DEB_PACKAGE === 'true') {
+                await generator.buildDebPackage();
+            }
+            //await generator.buildDebPackage();
+
         } catch (error) {
             console.error('Fatal error:', error);
             process.exit(1);
