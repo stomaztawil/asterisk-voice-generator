@@ -55,8 +55,8 @@ VOICE_LANGUAGE=pt-BR
 # AWS Warning supress
 SUPPRESS_NO_CONFIG_WARNING=true
 
-#To build package
-BUILD_DEB_PACKAGE=true
+# Package .deb destination folder
+DEB_OUTPUT_DIR=/home/vagrant/
 
 2. Sound List Format
 Create a JSON file (e.g., sounds.json) containing the voice prompts:
