@@ -39,23 +39,22 @@ Configuration
 1. Environment Setup
 Create a .env file with your AWS credentials and configuration:
 
-# AWS Credentials
+# AWS configurations
+AWS_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
+AWS_SECRET_ACCESS_KEY=<YOUR_SECRET_ACCESS_KEY>
 AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+SUPPRESS_NO_CONFIG_WARNING=true
 
-# Path configuration
-SOUND_LIST_PATH=/home/vagrant/arquivo_pronto.json
-OUTPUT_DIR=/home/vagrant/custom-sounds
-
-# Voice configuration
+# Polly configuration
 DEFAULT_VOICE=Thiago
 VOICE_LANGUAGE=pt-BR
 
-# AWS Warning supress
-SUPPRESS_NO_CONFIG_WARNING=true
-
-# Package .deb destination folder
+# Paths
+## JSON With all the files and descriptions
+SOUND_LIST_PATH=/home/vagrant/arquivo_pronto.json
+## Path for all generated files
+OUTPUT_DIR=/home/vagrant/custom-sounds
+## Path for the debian Package
 DEB_OUTPUT_DIR=/home/vagrant/
 
 2. Sound List Format
