@@ -26,9 +26,6 @@ export class VoiceGenerator {
             voices: {
                 defaultVoice: process.env.DEFAULT_VOICE,
                 language: process.env.VOICE_LANGUAGE
-            },
-            packaging: {
-                buildPackage: process.env.BUILD_DEB_PACKAGE
             }
         };
     }
@@ -147,10 +144,12 @@ export class VoiceGenerator {
             await generator.processSoundFiles();
             console.log('Processing completed!');
 
-            if (process.env.BUILD_DEB_PACKAGE === 'true') {
+            if (generator.generatedFiles.length > 0) {
+                console.log('Building Debian package due to changes...');
                 await generator.buildDebPackage();
+            } else {
+                console.log('No changes detected. Skipping package build.');
             }
-            //await generator.buildDebPackage();
 
         } catch (error) {
             console.error('Fatal error:', error);
