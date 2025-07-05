@@ -1,0 +1,150 @@
+# Asterisk Voice Generator
+
+## Overview
+
+The Asterisk Voice Generator is a Node.js tool that automates the creation of audio files for Asterisk IVR systems. It leverages AWS Polly for text-to-speech conversion and generates multiple audio formats (MP3, A-Law, μ-Law, 16kHz Signed Linear, and G.729) compatible with Asterisk. The tool includes caching mechanisms to avoid reprocessing unchanged content and can optionally build a Debian package for easy deployment.
+
+Key features:
+- AWS Polly integration with neural voices
+- Multi-format audio conversion
+- Smart caching system
+- Debian package generation
+- Parallel processing for efficiency
+
+## Prerequisites
+
+Before using this tool, ensure you have:
+
+1. **Node.js v18+** installed
+2. **AWS credentials** with Polly access
+3. **System dependencies**:
+   - `sox` (Sound eXchange)
+   - `ffmpeg`
+   - `build-essential` (for Debian packaging)
+
+Install system dependencies on Debian/Ubuntu:
+```bash
+sudo apt update && sudo apt install -y sox ffmpeg build-essential
+
+
+Installation
+1 - Clone the repository:
+    git clone https://github.com/your-repo/asterisk-voice-generator.git
+    cd asterisk-voice-generator
+
+2 - Install Node.js dependencies:
+    npm install
+
+Configuration
+1. Environment Setup
+Create a .env file with your AWS credentials and configuration:
+
+# AWS Credentials
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+
+# Path configuration
+SOUND_LIST_PATH=/home/vagrant/arquivo_pronto.json
+OUTPUT_DIR=/home/vagrant/custom-sounds
+
+# Voice configuration
+DEFAULT_VOICE=Thiago
+VOICE_LANGUAGE=pt-BR
+
+# AWS Warning supress
+SUPPRESS_NO_CONFIG_WARNING=true
+
+#To build package
+BUILD_DEB_PACKAGE=true
+
+2. Sound List Format
+Create a JSON file (e.g., sounds.json) containing the voice prompts:
+
+[
+  {
+    "path": "greetings",
+    "fileName": "welcome",
+    "speechText": "Hello, welcome to our support line"
+  },
+  {
+    "path": "menus",
+    "fileName": "main_menu",
+    "speechText": "Press 1 for sales, 2 for support"
+  }
+]
+
+
+Usage
+Generate Audio Files
+    npm start
+
+
+This will:
+
+- Process all entries in your sound list
+
+- Generate MP3 files using AWS Polly
+
+- Convert to Asterisk-compatible formats
+
+- Update the cache for future runs
+
+- Build Debian Package (Optional)
+    Set BUILD_DEB_PACKAGE=true in your .env file to automatically build a Debian package after processing audio files. The package will be created in the output directory.
+
+
+Project Structure
+asterisk-voice-generator/
+├── lib/services/
+│   ├── CacheManager.js       # Manages audio cache
+│   ├── FileConverter.js      # Handles audio format conversion
+│   ├── PackageBuilder.js     # Builds Debian packages
+│   └── PollyService.js       # AWS Polly integration
+├── .env                     # Configuration file
+├── .gitignore
+├── package.json
+├── package-lock.json
+└── VoiceGenerator.js        # Main entry point
+
+Advanced Configuration
+Voice Parameters
+
+Modify these values in .env:
+    - DEFAULT_VOICE: AWS Polly voice ID (e.g., "Matthew", "Joanna")
+    - VOICE_LANGUAGE: Voice language code (e.g., "en-US")
+
+Supported Formats
+The tool automatically generates these audio formats:
+
+- MP3 (original Polly output)
+- A-Law (.alaw)
+- μ-Law (.ulaw)
+- 16kHz Signed Linear (.sln16)
+- G.729 (.g729)
+
+Cache Management
+The cache is stored at [OUTPUT_DIR]/.audio-cache.json. To force reprocessing:
+
+1 - Delete individual cache entries
+2 - Or delete the entire cache file
+
+Troubleshooting
+Common Issues:
+
+1 AWS Authentication Errors:
+    - Verify credentials in .env
+    - Ensure IAM user has polly:SynthesizeSpeech permission
+
+2 Missing Dependencies:
+# Verify installation
+sox --version
+ffmpeg -version
+
+3 File Conversion Errors:
+    - Ensure output directory exists and is writable
+    - Check available disk space
+
+Debug Mode:
+Run with extended logging:
+    DEBUG=* node VoiceGenerator.js
