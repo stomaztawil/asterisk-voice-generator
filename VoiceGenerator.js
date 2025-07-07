@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
-import ID3 from 'node-id3'; // Nova importação
+import ID3 from 'node-id3';
 import { PackageBuilder } from './lib/services/PackageBuilder.js';
 import { PollyService } from './lib/services/PollyService.js';
 import { FileConverter } from './lib/services/FileConverter.js';

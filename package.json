@@ -12,7 +12,8 @@
     "@aws-sdk/client-polly": "^3.490.0",
     "dotenv": "^16.3.1",
     "fs-extra": "^11.2.0",
-    "mysql2": "^3.6.5"
+    "mysql2": "^3.6.5",
+    "node-id3": "^0.2.9"
   },
   "directories": {
     "lib": "lib",
