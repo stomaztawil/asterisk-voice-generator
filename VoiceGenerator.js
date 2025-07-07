@@ -1,10 +1,10 @@
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
+import ID3 from 'node-id3'; // Nova importação
 import { PackageBuilder } from './lib/services/PackageBuilder.js';
 import { PollyService } from './lib/services/PollyService.js';
 import { FileConverter } from './lib/services/FileConverter.js';
-import { CacheManager } from './lib/services/CacheManager.js'; // Updated class
 
 export class VoiceGenerator {
     constructor() {
@@ -12,9 +12,7 @@ export class VoiceGenerator {
         this.polly = new PollyService();
         this.converter = new FileConverter();
         this.generatedFiles = [];
-        this.cacheManager = new CacheManager(
-            path.join(this.config.paths.outputDir, '.audio-cache.json')
-        );
+        // Removido CacheManager
     }
 
     loadConfig() {
@@ -33,7 +31,6 @@ export class VoiceGenerator {
     async initialize() {
         await this.polly.verifyCredentials();
         await fs.ensureDir(this.config.paths.outputDir);
-        await this.cacheManager.load();
     }
 
     getItemHash(item) {
@@ -55,14 +52,11 @@ export class VoiceGenerator {
             processingQueue.push(this.processSoundItem(item));
         }
 
-        // Process in parallel with error handling
         await Promise.all(processingQueue.map(p => p.catch(e => console.error(e))));
 
         if (this.generatedFiles.length > 0) {
             await this.convertGeneratedFiles();
         }
-
-        await this.cacheManager.saveIfChanged();
     }
 
     async loadSoundList() {
@@ -88,23 +82,65 @@ export class VoiceGenerator {
         const outputFile = `${outputBase}.mp3`;
         const itemHash = this.getItemHash(item);
 
-        // Check cache and file existence
-        if (await this.cacheManager.isValid(relativePath, itemHash, outputFile)) {
+        // Verificar metadados ID3 existentes
+        if (await this.isAudioValid(outputFile, relativePath, itemHash)) {
             console.log(`Skipping ${relativePath} - no changes`);
             return;
         }
 
         console.log(`Processing: ${relativePath}`);
         
+        // Gerar áudio
         await this.polly.generateAudio({
             text: item.speechText,
             outputFile: outputBase,
             voiceId: this.config.voices.defaultVoice
         });
 
+        // Adicionar metadados ID3
+        await this.writeID3Tags(outputFile, {
+            path: relativePath,
+            hash: itemHash,
+            timestamp: new Date().toISOString()
+        });
+
         this.generatedFiles.push({ mp3Path: outputFile, basePath: outputBase });
-        this.cacheManager.update(relativePath, itemHash);
         console.log(`File processed: ${relativePath}`);
+    }
+
+    async isAudioValid(filePath, expectedPath, expectedHash) {
+        try {
+            // Verificar existência do arquivo
+            if (!(await fs.pathExists(filePath))) return false;
+            
+            // Ler metadados ID3
+            const tags = ID3.read(filePath);
+            
+            return tags && 
+                tags.path === expectedPath && 
+                tags.hash === expectedHash;
+        } catch (error) {
+            console.warn(`Error reading ID3 tags from ${filePath}:`, error);
+            return false;
+        }
+    }
+
+    async writeID3Tags(filePath, metadata) {
+        try {
+            const tags = {
+                title: path.basename(filePath),
+                artist: 'Asterisk Voice Generator',
+                album: 'Asterisk Core Sounds',
+                ...metadata
+            };
+
+            const success = ID3.write(tags, filePath);
+            if (!success) throw new Error('ID3 write operation failed');
+            
+            console.log(`ID3 tags updated for ${path.basename(filePath)}`);
+        } catch (error) {
+            console.error(`Failed to write ID3 tags to ${filePath}:`, error);
+        }
     }
         
     async convertGeneratedFiles() {
