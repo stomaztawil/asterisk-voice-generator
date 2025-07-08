@@ -12,14 +12,16 @@ export class VoiceGenerator {
         this.polly = new PollyService();
         this.converter = new FileConverter();
         this.generatedFiles = [];
-        // Removido CacheManager
     }
 
     loadConfig() {
+        // Definir diretório padrão na raiz do projeto
+        const defaultOutputDir = path.join(process.cwd(), 'generatedFiles');
+        
         return {
             paths: {
                 soundList: process.env.SOUND_LIST_PATH,
-                outputDir: process.env.OUTPUT_DIR
+                outputDir: defaultOutputDir
             },
             voices: {
                 defaultVoice: process.env.DEFAULT_VOICE,
@@ -109,16 +111,25 @@ export class VoiceGenerator {
     }
 
     async isAudioValid(filePath, expectedPath, expectedHash) {
-        try {
-            // Verificar existência do arquivo
-            if (!(await fs.pathExists(filePath))) return false;
-            
-            // Ler metadados ID3
-            const tags = ID3.read(filePath);
-            
-            return tags && 
-                tags.path === expectedPath && 
-                tags.hash === expectedHash;
+    try {
+        // Verificar existência do arquivo
+        if (!(await fs.pathExists(filePath))) return false;
+        
+        // Ler metadados ID3
+        const tags = ID3.read(filePath);
+        if (!tags) return false;
+        
+        // Extrair tags personalizadas
+        let customPath = '', customHash = '';
+        
+        if (tags.userDefinedText) {
+            tags.userDefinedText.forEach(tag => {
+                if (tag.description === 'path') customPath = tag.value;
+                if (tag.description === 'hash') customHash = tag.value;
+            });
+        }
+        
+        return customPath === expectedPath && customHash === expectedHash;
         } catch (error) {
             console.warn(`Error reading ID3 tags from ${filePath}:`, error);
             return false;
@@ -126,18 +137,22 @@ export class VoiceGenerator {
     }
 
     async writeID3Tags(filePath, metadata) {
-        try {
-            const tags = {
-                title: path.basename(filePath),
-                artist: 'Asterisk Voice Generator',
-                album: 'Asterisk Core Sounds',
-                ...metadata
-            };
+    try {
+        const tags = {
+            title: path.basename(filePath),
+            artist: 'Asterisk Voice Generator',
+            album: 'Asterisk Core Sounds',
+            userDefinedText: [
+                { description: 'path', value: metadata.path },
+                { description: 'hash', value: metadata.hash },
+                { description: 'timestamp', value: metadata.timestamp }
+            ]
+        };
 
-            const success = ID3.write(tags, filePath);
-            if (!success) throw new Error('ID3 write operation failed');
-            
-            console.log(`ID3 tags updated for ${path.basename(filePath)}`);
+        const success = ID3.write(tags, filePath);
+        if (!success) throw new Error('ID3 write operation failed');
+        
+        console.log(`ID3 tags updated for ${path.basename(filePath)}`);
         } catch (error) {
             console.error(`Failed to write ID3 tags to ${filePath}:`, error);
         }
