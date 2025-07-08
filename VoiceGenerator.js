@@ -15,7 +15,7 @@ export class VoiceGenerator {
     }
 
     loadConfig() {
-        // Definir diretório padrão na raiz do projeto
+        // Set default output directory at project root
         const defaultOutputDir = path.join(process.cwd(), 'generatedFiles');
         
         return {
@@ -71,6 +71,7 @@ export class VoiceGenerator {
     }
 
     shouldSkip(item) {
+        // Skip items without required fields or special tags
         if (!item?.fileName || !item?.speechText) return true;
         
         const text = item.speechText.trim();
@@ -84,22 +85,22 @@ export class VoiceGenerator {
         const outputFile = `${outputBase}.mp3`;
         const itemHash = this.getItemHash(item);
 
-        // Verificar metadados ID3 existentes
+        // Check existing ID3 metadata
         if (await this.isAudioValid(outputFile, relativePath, itemHash)) {
-            console.log(`Skipping ${relativePath} - no changes`);
+            console.log(`Skipping ${relativePath} - no changes detected`);
             return;
         }
 
         console.log(`Processing: ${relativePath}`);
         
-        // Gerar áudio
+        // Generate audio
         await this.polly.generateAudio({
             text: item.speechText,
             outputFile: outputBase,
             voiceId: this.config.voices.defaultVoice
         });
 
-        // Adicionar metadados ID3
+        // Add ID3 metadata
         await this.writeID3Tags(outputFile, {
             path: relativePath,
             hash: itemHash,
@@ -111,25 +112,25 @@ export class VoiceGenerator {
     }
 
     async isAudioValid(filePath, expectedPath, expectedHash) {
-    try {
-        // Verificar existência do arquivo
-        if (!(await fs.pathExists(filePath))) return false;
-        
-        // Ler metadados ID3
-        const tags = ID3.read(filePath);
-        if (!tags) return false;
-        
-        // Extrair tags personalizadas
-        let customPath = '', customHash = '';
-        
-        if (tags.userDefinedText) {
-            tags.userDefinedText.forEach(tag => {
-                if (tag.description === 'path') customPath = tag.value;
-                if (tag.description === 'hash') customHash = tag.value;
-            });
-        }
-        
-        return customPath === expectedPath && customHash === expectedHash;
+        try {
+            // Check file existence
+            if (!(await fs.pathExists(filePath))) return false;
+            
+            // Read ID3 tags
+            const tags = ID3.read(filePath);
+            if (!tags) return false;
+            
+            // Extract custom tags
+            let customPath = '', customHash = '';
+            
+            if (tags.userDefinedText) {
+                tags.userDefinedText.forEach(tag => {
+                    if (tag.description === 'path') customPath = tag.value;
+                    if (tag.description === 'hash') customHash = tag.value;
+                });
+            }
+            
+            return customPath === expectedPath && customHash === expectedHash;
         } catch (error) {
             console.warn(`Error reading ID3 tags from ${filePath}:`, error);
             return false;
@@ -137,42 +138,42 @@ export class VoiceGenerator {
     }
 
     async writeID3Tags(filePath, metadata) {
-    try {
-        const tags = {
-            title: path.basename(filePath),
-            artist: 'Asterisk Voice Generator',
-            album: 'Asterisk Core Sounds',
-            userDefinedText: [
-                { description: 'path', value: metadata.path },
-                { description: 'hash', value: metadata.hash },
-                { description: 'timestamp', value: metadata.timestamp }
-            ]
-        };
+        try {
+            const tags = {
+                title: path.basename(filePath),
+                artist: 'Asterisk Voice Generator',
+                album: 'Asterisk Core Sounds',
+                userDefinedText: [
+                    { description: 'path', value: metadata.path },
+                    { description: 'hash', value: metadata.hash },
+                    { description: 'timestamp', value: metadata.timestamp }
+                ]
+            };
 
-        const success = ID3.write(tags, filePath);
-        if (!success) throw new Error('ID3 write operation failed');
-        
-        console.log(`ID3 tags updated for ${path.basename(filePath)}`);
+            const success = ID3.write(tags, filePath);
+            if (!success) throw new Error('ID3 write operation failed');
+            
+            console.log(`ID3 tags updated for ${path.basename(filePath)}`);
         } catch (error) {
             console.error(`Failed to write ID3 tags to ${filePath}:`, error);
         }
     }
         
     async convertGeneratedFiles() {
-        console.log(`Starting conversion of ${this.generatedFiles.length} files...`);
+        console.log(`Starting format conversion for ${this.generatedFiles.length} files...`);
         const conversionQueue = [];
 
         for (const { mp3Path, basePath } of this.generatedFiles) {
             for (const format of ['alaw', 'ulaw', 'sln16', 'g729']) {
                 conversionQueue.push(
                     this.converter.convertFile(mp3Path, `${basePath}.${format}`, format)
-                        .catch(e => console.error(e))
+                        .catch(e => console.error(`Conversion error: ${e}`))
                 );
             }
         }
 
         await Promise.all(conversionQueue);
-        console.log('Format conversion completed!');
+        console.log('Format conversion completed');
     }
 
     async buildDebPackage() {
@@ -190,20 +191,20 @@ export class VoiceGenerator {
         const generator = new VoiceGenerator();
         
         try {
-            console.log('Starting processing...');
+            console.log('Starting audio processing pipeline');
             await generator.initialize();
             await generator.processSoundFiles();
-            console.log('Processing completed!');
+            console.log('Processing completed successfully');
 
             if (generator.generatedFiles.length > 0) {
-                console.log('Building Debian package due to changes...');
+                console.log('Building Debian package with new files');
                 await generator.buildDebPackage();
             } else {
-                console.log('No changes detected. Skipping package build.');
+                console.log('No file changes detected. Skipping package build');
             }
 
         } catch (error) {
-            console.error('Fatal error:', error);
+            console.error('Fatal processing error:', error);
             process.exit(1);
         } finally {
             generator.polly.destroy?.();
